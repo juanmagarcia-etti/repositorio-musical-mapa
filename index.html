@@ -228,7 +228,7 @@
       root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     });
 
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhRfKyMnnVk_xxFEU71TKqcvmijTeXuZAfM7lr3HvoTGfBAApbR2Etg23owHYX4eMrCWMDPnTU4m/pub?output=csv'; function parseCSV(text) {   const lines = text.trim().split('
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7PcVBXTAc-6_iOrEgSIApwYRnC-FUw5ydQ8iLbOVGBNTtBb4fjnGkh-8Ixsy6oda8_znepL1B4uD2/pub?output=csv'; function parseCSV(text) {   const lines = text.trim().split('
 ');   const headers = lines[0].split(',');   return lines.slice(1).map(line => {     const vals = line.split(',');     const obj = {};     headers.forEach((h, i) => { obj[h.trim()] = vals[i] ? vals[i].trim() : ''; });     obj.lat = parseFloat(obj.lat);     obj.lon = parseFloat(obj.lon);     return obj;   }); } fetch(CSV_URL)   .then(r => r.text())   .then(text => { RAW = parseCSV(text); render(); })   .catch(() => render());
   </script>
 </body>
