@@ -1,108 +1,97 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Repositorio Musical Mapa</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; background: #111; color: #eee; }
-    #map { height: 100vh; width: 100%; }
-    #sidebar {
-      position: fixed; top: 16px; right: 16px; width: 320px;
-      background: #1a1a2e; border-radius: 12px; padding: 20px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.5); z-index: 1000;
-      display: none;
-    }
-    #sidebar.active { display: block; }
-    #sidebar .close { float: right; cursor: pointer; font-size: 20px; color: #aaa; }
-    #sidebar .close:hover { color: #fff; }
-    #sidebar h2 { font-size: 18px; margin-bottom: 12px; color: #fff; }
-    #sidebar .field { margin-bottom: 8px; font-size: 14px; }
-    #sidebar .field strong { color: #99a; }
-    #sidebar .portada { margin-top: 16px; border-radius: 8px; width: 100%; }
-    #sidebar a { color: #7af; text-decoration: none; }
-    #sidebar a:hover { text-decoration: underline; }
-    .header {
-      position: fixed; top: 16px; left: 16px; z-index: 1000;
-      background: rgba(26,26,46,.9);
-      border-radius: 12px; padding: 12px 18px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.5);
-    }
-    .header h1 { font-size: 16px; color: #fff; margin-bottom: 8px; }
-    .header .status { font-size: 12px; color: #889; }
-    .marker-count { position: fixed; bottom: 24px; left: 24px; z-index: 1000; background: rgba(26,26,46,.9); border-radius: 12px; padding: 12px 18px; font-size: 13px; color: #99a; box-shadow: 0 4px 24px rgba(0,0,0,.5); }
-  </style>
-</head>
+<head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Repositorio Musical Mapa</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#111;color:#eee;overflow:hidden}
+#map{height:100vh;width:100%}
+#sidebar{position:fixed;top:16px;right:16px;width:340px;background:#1a1a2e;border-radius:12px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,.6);z-index:1000;display:none}
+#sidebar.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+#sidebar .close{float:right;cursor:pointer;font-size:20px;color:#999;line-height:1}
+#sidebar .close:hover{color:#fff}
+#sidebar h2{font-size:18px;margin-bottom:12px;color:#fff;border-bottom:1px solid #444;padding-bottom:6px}
+#sidebar .field{margin-bottom:8px;font-size:13px;color:#bbb}
+#sidebar .field strong{color:#7a8}
+#sidebar .portada{margin-top:16px;border-radius:8px;width:100%;display:block}
+#sidebar a{color:#6af;text-decoration:none}
+#sidebar a:hover{text-decoration:underline}
+.header{position:fixed;top:16px;left:16px;z-index:1000;background:rgba(26,26,46,.9);border-radius:12px;padding:12px 18px;box-shadow:0 4px 24px rgba(0,0,0,.6);backdrop-filter:blur(8px)}
+.header h1{font-size:15px;color:#fff;font-weight:600}
+.header .status{font-size:11px;color:#889;margin-top:4px}
+.marker-count{position:fixed;bottom:24px;left:24px;z-index:1000;background:rgba(26,26,46,.9);border-radius:12px;padding:10px 16px;font-size:12px;color:#99a;box-shadow:0 4px 24px rgba(0,0,0,.6);backdrop-filter:blur(8px)}
+.loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2000;font-size:14px;color:#99a;text-align:center}
+.spinner{width:32px;height:32px;border:3px solid #333;border-top-color:#777;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.leaflet-popup-content-wrapper{background:#1a1a2e;color:#ccc;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:#1a1a2e}
+.leaflet-popup-content{margin:12px 14px;font-size:13px;font-weight:500;color:#fff}
+</style></head>
 <body>
-  <div class="header">
-    <h1>Repositorio Musical</h1>
-    <div class="status">Datos cargados desde Google Sheets</div>
-  </div>
-  <div id="map"></div>
-  <div id="sidebar">
-    <span class="close" onclick="this.parentElement.classList.remove('active')">&times;</span>
-    <h2 id="sb-grupo">Grupo</h2>
-    <div class="field"><strong>Género:</strong> <span id="sb-genero"></span></div>
-    <div class="field"><strong>País:</strong> <span id="sb-pais"></span></div>
-    <div class="field"><strong>Ciudad:</strong> <span id="sb-ciudad"></span></div>
-    <div class="field"><strong>Disco clave:</strong> <span id="sb-disco"></span></div>
-    <div class="field"><strong>Escuchar:</strong> <a id="sb-link" href="#" target="_blank">Abrir link</a></div>
-    <img id="sb-portada" class="portada" style="display:none">
-  </div>
-  <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/1cyhc4HdPzMcCTFhOQidzXWqAEyNPT7wEbrwcAKqfkHs/export?format=csv';
-    const COORDS = { 'Canada': [56.1304, -106.3468], 'Espana': [40.4637, -3.7492], 'Argentina': [-38.4161, -63.6167], 'Noruega': [60.472, 8.4689], 'Italia': [41.8719, 12.5674] };
-
-    const map = L.map('map').setView([30, 0], 3);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap', maxZoom: 19
-    }).addTo(map);
-
-    fetch(CSV_URL)
-      .then(r => r.text())
-      .then(text => {
-        const lines = text.trim().split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
-        let count = 0;
-        for (let i = 1; i < lines.length; i++) {
-          const row = lines[i].split(',');
-          if (row.length < 2) continue;
-          const d = {};
-          headers.forEach((h, j) => { d[h] = row[j] ? row[j].trim() : ''; });
-          if (!d.grupo || !d.pais) continue;
-          const coord = COORDS[d.pais];
-          if (!coord) continue;
-          L.marker(coord).addTo(map).on('click', () => showSidebar(d));
-          count++;
-        }
-        document.querySelector('.header .status').textContent = count + ' grupos cargados desde Google Sheets';
-      })
-      .catch(e => {
-        document.querySelector('.header .status').textContent = 'Error cargando datos';
-        console.error(e);
-      });
-
-    function showSidebar(d) {
-      document.getElementById('sb-grupo').textContent = d.grupo;
-      document.getElementById('sb-genero').textContent = d.genero || '-';
-      document.getElementById('sb-pais').textContent = d.pais || '-';
-      document.getElementById('sb-ciudad').textContent = d.ciudad || '-';
-      document.getElementById('sb-disco').textContent = d.disco_clave || '-';
-      const link = document.getElementById('sb-link');
-      link.href = d.youtube_music || '#';
-      link.textContent = d.youtube_music ? 'Escuchar en YouTube Music' : '-';
-      const img = document.getElementById('sb-portada');
-      if (d.portada && d.portada.length > 5) {
-        img.src = d.portada;
-        img.style.display = 'block';
-      } else {
-        img.style.display = 'none';
-      }
-      document.getElementById('sidebar').classList.add('active');
-    }
-  </script>
+<div class="header"><h1>Repositorio Musical</h1><div class="status">Conectando con Google Sheets&hellip;</div></div>
+<div id="loading" class="loading"><div class="spinner"></div>Cargando datos&hellip;</div>
+<div id="map"></div>
+<div class="marker-count">0 grupos cargados</div>
+<script>
+const CSV_URL='https://docs.google.com/spreadsheets/d/1cyhc4HdPzMcCTFhOQidzXWqAEyNPT7wEbrwcAKqfkHs/export?format=csv';
+const COORDS={'Canada':[56.13,-106.35],'Espana':[40.46,-3.75],'Argentina':[-34.61,-58.38],'Noruega':[60.47,8.47],'Italia':[40.85,14.27]};
+const map=L.map('map',{zoomControl:false,zoomDelta:0.5}).setView([28,0],3);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',maxZoom:19}).addTo(map);
+let count=0;
+fetch(CSV_URL).then(r=>r.ok?r.text():Promise.reject(r.status))
+.then(text=>{
+const lines=text.trim().split('\n');
+const hdr=lines[0].split(',').map(h=>h.trim());
+for(let i=1;i<lines.length;i++){
+const row=lines[i].split(',');
+if(row.length<2)continue;
+const d={};hdr.forEach((h,j)=>{d[h]=row[j]?.trim()||''});
+if(!d.grupo||!d.pais)continue;
+const c=COORDS[d.pais];
+if(!c)continue;
+const mk=L.marker(c,{title:d.grupo}).addTo(map);
+const info='<strong>'+d.grupo+'</strong><br><em>'+d.genero+'</em><br>'+d.pais;
+mk.bindPopup(info);
+mk.on('click',()=>showSidebar(d));
+count++;
+}
+document.getElementById('loading').style.display='none';
+document.querySelector('.header .status').textContent=count+' grupos cargados desde Google Sheets';
+document.querySelector('.marker-count').textContent=count+' grupos cargados';
+})
+.catch(e=>{
+document.getElementById('loading').innerHTML='Error cargando datos';
+document.querySelector('.header .status').textContent='Error al conectar';
+console.error(e);
+});
+function showSidebar(d){
+document.getElementById('sb-grupo').textContent=d.grupo;
+document.getElementById('sb-genero').textContent=d.genero||'-';
+document.getElementById('sb-pais').textContent=d.pais||'-';
+document.getElementById('sb-ciudad').textContent=d.ciudad||'-';
+document.getElementById('sb-disco').textContent=d.disco_clave||'-';
+const link=document.getElementById('sb-link');
+link.href=d.youtube_music||'#';
+link.textContent=d.youtube_music?'Escuchar en YouTube Music':'-';
+const img=document.getElementById('sb-portada');
+if(d.portada&&d.portada.length>5){img.src=d.portada;img.style.display='block';}else{img.style.display='none';}
+document.getElementById('sidebar').classList.add('active');
+}
+</script>
+<div id="sidebar">
+<span class="close" onclick="this.parentElement.classList.remove('active')">&times;</span>
+<h2 id="sb-grupo">Grupo</h2>
+<div class="field"><strong>G&#233;nero:</strong> <span id="sb-genero"></span></div>
+<div class="field"><strong>Pa&#237;s:</strong> <span id="sb-pais"></span></div>
+<div class="field"><strong>Ciudad:</strong> <span id="sb-ciudad"></span></div>
+<div class="field"><strong>Disco clave:</strong> <span id="sb-disco"></span></div>
+<div class="field"><strong>Escuchar:</strong> <a id="sb-link" href="#" target="_blank">Abrir</a></div>
+<img id="sb-portada" class="portada" style="display:none" alt="Portada">
+</div>
 </body>
 </html>
