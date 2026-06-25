@@ -102,7 +102,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script>
-    const RAW = [{"grupo": "Rush", "pais": "Canada", "ciudad": "Toronto", "genero": "Rock Progresivo", "disco_clave": "Moving Pictures", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_kqF9F8pTNDZKZ6Rhz9I0eEiVwr0QjWPSw&si=lTgSGIzFo8-mdO2e", "portada": "https://upload.wikimedia.org/wikipedia/en/9/97/Rush_Moving_Pictures.png", "lat": 43.6532, "lon": -79.3832}, {"grupo": "Carolina Durante", "pais": "Espana", "ciudad": "Madrid", "genero": "Indie Rock", "disco_clave": "Elige tu propia aventura", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_nLVwnfm_ZZdUNYqG8Th2G1kwIO2UpeYiQ&si=sBTWSisk1t6V3PDh", "portada": "https://upload.wikimedia.org/wikipedia/en/thumb/1/1b/Carolina_Durante_-_Elige_tu_propia_aventura.png/600px-Carolina_Durante_-_Elige_tu_propia_aventura.png", "lat": 40.4168, "lon": -3.7038}, {"grupo": "Pescado Rabioso", "pais": "Argentina", "ciudad": "Buenos Aires", "genero": "Folk Rock", "disco_clave": "Artaud", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_lo1rg5ZVqTZ3IP9j2PXQlyj5es9lXqKww&si=_w2owdhSDo8ht4_y", "portada": "https://upload.wikimedia.org/wikipedia/en/5/5e/Artaud_%28album_cover%29.jpg", "lat": -34.6037, "lon": -58.3816}, {"grupo": "Burzum", "pais": "Noruega", "ciudad": "Bergen", "genero": "Black Metal", "disco_clave": "Filosofem", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_nuHUBdFPFE0WMYv5OjyNPWMyXNwILrK3s&si=HR83R6N3VExmqx9h", "portada": "https://upload.wikimedia.org/wikipedia/en/5/5b/Burzum_-_Filosofem.png", "lat": 60.3913, "lon": 5.3221}, {"grupo": "Mind Enterprises", "pais": "Italia", "ciudad": "Napolis", "genero": "Italo Disco", "disco_clave": "Negroni Love", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_mPv_ZwstFlb3aDN_suZ--mFieLx4DZfEs&si=CV06OEgDJ0VgA1Fd", "portada": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b8/Mind_Enterprises_-_Negroni_Love.png/600px-Mind_Enterprises_-_Negroni_Love.png", "lat": 40.8518, "lon": 14.2681}];
+    let RAW = [];
     let searchText = '';
     let activeCountry = 'Todos';
     let activeGenre = 'Todos';
@@ -228,7 +228,8 @@
       root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     });
 
-    render();
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhRfKyMnnVk_xxFEU71TKqcvmijTeXuZAfM7lr3HvoTGfBAApbR2Etg23owHYX4eMrCWMDPnTU4m/pub?output=csv'; function parseCSV(text) {   const lines = text.trim().split('
+');   const headers = lines[0].split(',');   return lines.slice(1).map(line => {     const vals = line.split(',');     const obj = {};     headers.forEach((h, i) => { obj[h.trim()] = vals[i] ? vals[i].trim() : ''; });     obj.lat = parseFloat(obj.lat);     obj.lon = parseFloat(obj.lon);     return obj;   }); } fetch(CSV_URL)   .then(r => r.text())   .then(text => { RAW = parseCSV(text); render(); })   .catch(() => render());
   </script>
 </body>
 </html>
