@@ -1,235 +1,392 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mapa Musical Filtrable</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-                  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <title>Mapa musical</title>
+
+  <link rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
   <style>
-    :root, [data-theme="light"] {
-      --bg:#f5f1ea; --surface:#fbf7f1; --surface-2:#efe9e0; --border:rgba(40,37,29,.12);
-      --text:#28251d; --muted:#706a63; --faint:#a0978c; --accent:#0e6b73; --accent-2:#b25b32;
-      --shadow:0 16px 36px rgba(30,24,18,.10);
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: Arial, sans-serif; background: #07111f; color: #fff; }
+    .app { display: grid; grid-template-columns: 360px 1fr; min-height: 100vh; }
+    .sidebar {
+      background: #0d1b2a;
+      border-right: 1px solid rgba(255,255,255,.08);
+      padding: 20px;
+      overflow: auto;
     }
-    [data-theme="dark"] {
-      --bg:#11110f; --surface:#181715; --surface-2:#22211e; --border:rgba(255,255,255,.08);
-      --text:#ddd8d0; --muted:#978f86; --faint:#5e5953; --accent:#76acb4; --accent-2:#d58c62;
-      --shadow:0 18px 42px rgba(0,0,0,.34);
+    .sidebar h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .sidebar p { margin: 0 0 18px; color: #b8c4d6; }
+    .panel {
+      background: #13263a;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
     }
-    * { box-sizing:border-box; }
-    html,body { margin:0; min-height:100%; }
-    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
-    .app { min-height:100vh; display:grid; grid-template-columns:390px 1fr; }
-    .sidebar { border-right:1px solid var(--border); background:linear-gradient(180deg,var(--surface),var(--bg)); padding:22px 18px; overflow:auto; }
-    .eyebrow { font-size:12px; text-transform:uppercase; letter-spacing:.14em; color:var(--accent-2); font-weight:700; margin-bottom:10px; }
-    h1 { margin:0; font-family:'Instrument Serif',serif; font-size:clamp(34px,4vw,52px); line-height:.95; font-weight:400; letter-spacing:-.03em; }
-    .sub { margin:14px 0 18px; color:var(--muted); font-size:14px; line-height:1.5; max-width:29ch; }
-    .toolbar { display:grid; grid-template-columns:1fr 44px; gap:10px; margin-bottom:12px; }
-    .search,.select { width:100%; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:12px; padding:12px 14px; outline:none; }
-    .theme-btn { width:44px; height:44px; border-radius:12px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; }
-    .filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-    .stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-    .stat { border:1px solid var(--border); background:var(--surface); border-radius:999px; padding:8px 12px; font-size:12px; color:var(--muted); }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-    .chip { border:1px solid var(--border); background:var(--surface); color:var(--muted); border-radius:999px; padding:8px 12px; font-size:12px; cursor:pointer; }
-    .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .list { display:grid; gap:12px; }
-    .item { border:1px solid var(--border); background:var(--surface); border-radius:18px; padding:14px; display:grid; grid-template-columns:58px 1fr; gap:12px; cursor:pointer; box-shadow:var(--shadow); }
-    .item img { width:58px; height:58px; object-fit:cover; border-radius:12px; display:block; background:var(--surface-2); }
-    .item-name { font-weight:700; font-size:15px; margin-bottom:4px; }
-    .item-meta { color:var(--muted); font-size:12px; line-height:1.45; }
-    .map-wrap { position:relative; min-height:100vh; }
-    #map { height:100vh; width:100%; }
-    .panel { position:absolute; right:20px; top:20px; width:min(390px,calc(100% - 40px)); background:color-mix(in oklab,var(--surface) 92%,transparent); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow); overflow:hidden; z-index:500; }
-    .cover { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:var(--surface-2); }
-    .panel-body { padding:18px; }
-    .panel-title { margin:0 0 10px; font-family:'Instrument Serif',serif; font-size:34px; line-height:.95; font-weight:400; }
-    .panel-row { margin:0 0 10px; color:var(--muted); font-size:14px; line-height:1.45; }
-    .label { color:var(--faint); text-transform:uppercase; letter-spacing:.1em; font-size:11px; display:block; margin-bottom:4px; }
-    .listen { display:inline-flex; align-items:center; justify-content:center; width:100%; padding:13px 16px; border-radius:12px; background:var(--accent); color:#fff; text-decoration:none; font-weight:700; margin-top:8px; }
-    .leaflet-popup-content-wrapper,.leaflet-popup-tip { background:var(--surface); color:var(--text); }
-    .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background:rgba(14,107,115,.18); }
-    .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background:var(--accent); color:#fff; font-weight:700; }
-    @media (max-width:980px) {
-      .app { grid-template-columns:1fr; }
-      .sidebar { border-right:none; border-bottom:1px solid var(--border); }
-      .map-wrap,#map { min-height:72vh; height:72vh; }
-      .panel { left:12px; right:12px; top:auto; bottom:12px; width:auto; }
-      .filters { grid-template-columns:1fr; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat {
+      background: rgba(255,255,255,.04);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .stat strong { display: block; font-size: 1.3rem; }
+    .stat span { color: #b8c4d6; font-size: .85rem; }
+
+    label { display: block; margin: 0 0 6px; font-size: .9rem; color: #b8c4d6; }
+    input, select {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: #0c1724;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    #list { display: grid; gap: 10px; }
+    .item {
+      width: 100%;
+      text-align: left;
+      background: rgba(255,255,255,.04);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+    }
+    .item:hover, .item.active { border-color: #53c8ff; background: rgba(83,200,255,.09); }
+    .item strong { display: block; margin-bottom: 4px; }
+    .item small { display: block; color: #b8c4d6; }
+
+    .map-wrap { position: relative; min-height: 100vh; }
+    #map { width: 100%; height: 100vh; background: #000; }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(83,200,255,.12);
+      color: #7fdbff;
+      font-size: .82rem;
+      margin-top: 4px;
+    }
+
+    .meta { color: #b8c4d6; font-size: .85rem; }
+    .error { color: #ff8d8d; }
+    .ok { color: #8ef0a7; }
+
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: #102033;
+      color: #fff;
+    }
+    .popup img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: #0a1320;
+    }
+    .popup h3 { margin: 0 0 6px; }
+    .popup p { margin: 0 0 8px; color: #c4d0df; }
+    .popup a { color: #7fdbff; text-decoration: none; }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      #map { height: 70vh; }
+      .map-wrap { min-height: 70vh; }
     }
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
-      <div class="eyebrow">Repositorio musical</div>
-      <h1>Mapa de grupos</h1>
-      <p class="sub">Ahora sí: buscador, filtro por país, filtro por género y agrupación de marcadores para que el mapa no se convierta en un infierno cuando crezca.</p>
-      <div class="toolbar">
-        <input id="search" class="search" type="text" placeholder="Buscar grupo, disco, ciudad o país" />
-        <button class="theme-btn" id="themeBtn" aria-label="Cambiar tema">◐</button>
-      </div>
-      <div class="filters">
-        <select id="countryFilter" class="select"></select>
-        <select id="genreFilter" class="select"></select>
-      </div>
-      <div class="stats">
-        <div class="stat" id="countStat"></div>
-        <div class="stat" id="countryStat"></div>
-      </div>
-      <div class="chips" id="quickGenres"></div>
-      <div class="list" id="list"></div>
-    </aside>
-    <main class="map-wrap">
-      <div id="map"></div>
-      <section class="panel" id="panel">
-        <img id="cover" class="cover" alt="Portada del disco" />
-        <div class="panel-body">
-          <h2 id="title" class="panel-title"></h2>
-          <p class="panel-row"><span class="label">Ubicación</span><span id="location"></span></p>
-          <p class="panel-row"><span class="label">Género</span><span id="genre"></span></p>
-          <p class="panel-row"><span class="label">Disco clave</span><span id="album"></span></p>
-          <a id="listen" class="listen" href="#" target="_blank" rel="noopener noreferrer">Escuchar en YouTube Music</a>
+      <h1>Mapa musical</h1>
+      <p>Conectado en directo con Google Sheets.</p>
+
+      <section class="panel">
+        <div class="stats">
+          <div class="stat"><strong id="totalCount">0</strong><span>Entradas</span></div>
+          <div class="stat"><strong id="visibleCount">0</strong><span>Visibles</span></div>
+          <div class="stat"><strong id="countryCount">0</strong><span>Países</span></div>
+          <div class="stat"><strong id="genreCount">0</strong><span>Géneros</span></div>
         </div>
       </section>
+
+      <section class="panel">
+        <label for="search">Buscar</label>
+        <input id="search" type="search" placeholder="Grupo, disco, ciudad, país..." />
+
+        <label for="genreFilter">Género</label>
+        <select id="genreFilter">
+          <option value="">Todos</option>
+        </select>
+
+        <label for="countryFilter">País</label>
+        <select id="countryFilter">
+          <option value="">Todos</option>
+        </select>
+
+        <div class="meta" id="statusText">Cargando datos…</div>
+        <div class="badge">Autoactualización cada 60 segundos</div>
+      </section>
+
+      <section class="panel">
+        <div id="list"></div>
+      </section>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map"></div>
     </main>
   </div>
-  <script>
-    let RAW = [];
-    let searchText = '';
-    let activeCountry = 'Todos';
-    let activeGenre = 'Todos';
-    let activeQuickGenre = 'Todos';
 
-    const genreColors = {
-      'Rock Progresivo': '#4c8c00',
-      'Indie Rock': '#b86240',
-      'Folk Rock': '#8e7d4d',
-      'Black Metal': '#6a6a6a',
-      'Italo Disco': '#a3537f'
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1cyhc4HdPzMcCTFhOQidzXWqAEyNPT7wEbrwcAKqfkHs/gviz/tq?tqx=out:csv&gid=0";
+    const REFRESH_MS = 60000;
+
+    const state = {
+      rows: [],
+      filtered: [],
+      markers: [],
+      activeId: null
     };
 
-    const map = L.map('map', { zoomControl: true, worldCopyJump: true }).setView([28, 5], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
-    const cluster = L.markerClusterGroup({ showCoverageOnHover:false, spiderfyOnMaxZoom:true, maxClusterRadius:48 });
-    map.addLayer(cluster);
+    const els = {
+      search: document.getElementById("search"),
+      genreFilter: document.getElementById("genreFilter"),
+      countryFilter: document.getElementById("countryFilter"),
+      list: document.getElementById("list"),
+      statusText: document.getElementById("statusText"),
+      totalCount: document.getElementById("totalCount"),
+      visibleCount: document.getElementById("visibleCount"),
+      countryCount: document.getElementById("countryCount"),
+      genreCount: document.getElementById("genreCount")
+    };
 
-    const markerIcon = (color) => L.divIcon({
-      className: '',
-      html: `<div style="width:18px;height:18px;border-radius:999px;background:${color};border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,.22)"></div>`,
-      iconSize:[18,18], iconAnchor:[9,9]
-    });
+    const map = L.map("map", { worldCopyJump: true }).setView([20, 0], 2);
 
-    const list = document.getElementById('list');
-    const countryFilter = document.getElementById('countryFilter');
-    const genreFilter = document.getElementById('genreFilter');
-    const quickGenres = document.getElementById('quickGenres');
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
 
-    function uniqueValues(key) {
-      return [...new Set(RAW.map(r => r[key]).filter(Boolean))].sort((a,b) => a.localeCompare(b));
-    }
+    const markerLayer = L.layerGroup().addTo(map);
 
-    function buildSelect(select, values, current, placeholder) {
-      select.innerHTML = [`<option value="Todos">${placeholder}</option>`, ...values.map(v => `<option value="${v}" ${v===current?'selected':''}>${v}</option>`)].join('');
-    }
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
 
-    function buildQuickGenres() {
-      const genres = ['Todos', ...uniqueValues('genero')];
-      quickGenres.innerHTML = genres.map(g => `<button class="chip ${g===activeQuickGenre?'active':''}" data-genre="${g}">${g}</button>`).join('');
-      quickGenres.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', () => {
-        activeQuickGenre = btn.dataset.genre;
-        activeGenre = activeQuickGenre === 'Todos' ? 'Todos' : activeQuickGenre;
-        genreFilter.value = activeGenre;
-        render();
-      }));
-    }
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
 
-    function filteredData() {
-      return RAW.filter(r => {
-        const text = `${r.grupo} ${r.pais} ${r.ciudad} ${r.genero} ${r.disco_clave}`.toLowerCase();
-        const searchOk = !searchText || text.includes(searchText);
-        const countryOk = activeCountry === 'Todos' || r.pais === activeCountry;
-        const genreOk = activeGenre === 'Todos' || r.genero === activeGenre;
-        return searchOk && countryOk && genreOk;
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            cell += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          row.push(cell);
+          cell = "";
+        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+          if (char === "\r" && next === "\n") i++;
+          row.push(cell);
+          if (row.some(v => v.trim() !== "")) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += char;
+        }
+      }
+
+      if (cell.length || row.length) {
+        row.push(cell);
+        if (row.some(v => v.trim() !== "")) rows.push(row);
+      }
+
+      const headers = rows.shift().map(h => h.trim());
+
+      return rows.map((cols, index) => {
+        const obj = { __id: index };
+        headers.forEach((header, i) => obj[header] = (cols[i] || "").trim());
+        return obj;
       });
     }
 
-    function openFicha(item) {
-      document.getElementById('cover').src = item.portada;
-      document.getElementById('cover').alt = `Portada de ${item.disco_clave}`;
-      document.getElementById('title').textContent = item.grupo;
-      document.getElementById('location').textContent = `${item.ciudad}, ${item.pais}`;
-      document.getElementById('genre').textContent = item.genero;
-      document.getElementById('album').textContent = item.disco_clave;
-      document.getElementById('listen').href = item.youtube_music;
+    function normalizeRows(rows) {
+      return rows
+        .map((row, i) => ({
+          id: `${row.grupo || "item"}-${i}`,
+          grupo: row.grupo || "",
+          pais: row.pais || "",
+          ciudad: row.ciudad || "",
+          genero: row.genero || "",
+          disco: row.disco_clave || "",
+          youtube: row.youtube_music || "",
+          portada: row.portada || "",
+          lat: parseFloat(String(row.lat || "").replace(",", ".")),
+          lon: parseFloat(String(row.lon || "").replace(",", "."))
+        }))
+        .filter(row => row.grupo && Number.isFinite(row.lat) && Number.isFinite(row.lon));
     }
 
-    function renderList(data) {
-      if (!data.length) { list.innerHTML = '<div class="item" style="grid-template-columns:1fr;cursor:default"><div class="item-meta">No hay resultados con esos filtros.</div></div>'; return; }
-      list.innerHTML = data.map((item, i) => `
-        <article class="item" data-index="${i}">
-          <img src="${item.portada}" alt="Portada de ${item.disco_clave}" loading="lazy" width="58" height="58">
-          <div>
-            <div class="item-name">${item.grupo}</div>
-            <div class="item-meta">${item.ciudad}, ${item.pais}</div>
-            <div class="item-meta">${item.genero} · ${item.disco_clave}</div>
-          </div>
-        </article>
-      `).join('');
-      list.querySelectorAll('.item').forEach((el, i) => el.addEventListener('click', () => {
-        const item = data[i];
-        openFicha(item);
-        map.flyTo([Number(item.lat), Number(item.lon)], 5, { duration:0.8 });
-      }));
+    function uniqueSorted(values) {
+      return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
     }
 
-    function renderMap(data) {
-      cluster.clearLayers();
-      const markers = data.map(item => {
-        const color = genreColors[item.genero] || '#4c8c90';
-        const marker = L.marker([Number(item.lat), Number(item.lon)], { icon: markerIcon(color) });
-        marker.bindPopup(`<strong>${item.grupo}</strong><br>${item.ciudad}, ${item.pais}<br>${item.disco_clave}`);
-        marker.on('click', () => openFicha(item));
-        return marker;
+    function fillSelect(select, values) {
+      const current = select.value;
+      select.innerHTML = '<option value="">Todos</option>';
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
       });
-      cluster.addLayers(markers);
-      if (markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
+      select.value = values.includes(current) ? current : "";
     }
 
-    function renderStats(data) {
-      document.getElementById('countStat').textContent = `${data.length} grupo${data.length!==1?'s':''}`;
-      const countries = new Set(data.map(d => d.pais));
-      document.getElementById('countryStat').textContent = `${countries.size} país${countries.size!==1?'es':''} visibles`;
+    function popupHTML(row) {
+      const cover = row.portada
+        ? `<img src="${row.portada}" alt="Portada de ${row.disco || row.grupo}" loading="lazy">`
+        : "";
+
+      const link = row.youtube
+        ? `<a href="${row.youtube}" target="_blank" rel="noopener noreferrer">Escuchar en YouTube Music</a>`
+        : "";
+
+      return `
+        <div class="popup">
+          ${cover}
+          <h3>${row.grupo}</h3>
+          <p>${[row.ciudad, row.pais].filter(Boolean).join(", ")}</p>
+          <p>${[row.genero, row.disco].filter(Boolean).join(" · ")}</p>
+          ${link}
+        </div>
+      `;
     }
 
-    function render() {
-      buildSelect(countryFilter, uniqueValues('pais'), activeCountry, 'Todos los países');
-      buildSelect(genreFilter, uniqueValues('genero'), activeGenre, 'Todos los géneros');
-      buildQuickGenres();
-      const data = filteredData();
-      renderStats(data);
-      renderList(data);
-      renderMap(data);
-      if (data.length) openFicha(data[0]);
+    function renderMarkers(rows) {
+      markerLayer.clearLayers();
+      state.markers = [];
+
+      rows.forEach(row => {
+        const marker = L.marker([row.lat, row.lon]).bindPopup(popupHTML(row));
+        marker.on("click", () => setActive(row.id));
+        marker.addTo(markerLayer);
+        state.markers.push({ id: row.id, row, marker });
+      });
+
+      if (rows.length === 1) {
+        map.setView([rows[0].lat, rows[0].lon], 6);
+      } else if (rows.length > 1) {
+        map.fitBounds(L.latLngBounds(rows.map(r => [r.lat, r.lon])).pad(0.2));
+      }
     }
 
-    document.getElementById('search').addEventListener('input', e => { searchText = e.target.value.toLowerCase().trim(); render(); });
-    countryFilter.addEventListener('change', e => { activeCountry = e.target.value; render(); });
-    genreFilter.addEventListener('change', e => { activeGenre = e.target.value; activeQuickGenre = e.target.value; render(); });
-    document.getElementById('themeBtn').addEventListener('click', () => {
-      const root = document.documentElement;
-      root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-    });
+    function renderList(rows) {
+      els.list.innerHTML = "";
+      rows.forEach(row => {
+        const btn = document.createElement("button");
+        btn.className = "item" + (state.activeId === row.id ? " active" : "");
+        btn.innerHTML = `
+          <strong>${row.grupo}</strong>
+          <small>${[row.ciudad, row.pais].filter(Boolean).join(", ")}</small>
+          <small>${[row.genero, row.disco].filter(Boolean).join(" · ")}</small>
+        `;
+        btn.addEventListener("click", () => focusRow(row.id));
+        els.list.appendChild(btn);
+      });
+    }
 
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7PcVBXTAc-6_iOrEgSIApwYRnC-FUw5ydQ8iLbOVGBNTtBb4fjnGkh-8Ixsy6oda8_znepL1B4uD2/pub?output=csv'; function parseCSV(text) {   const lines = text.trim().split('
-');   const headers = lines[0].split(',');   return lines.slice(1).map(line => {     const vals = line.split(',');     const obj = {};     headers.forEach((h, i) => { obj[h.trim()] = vals[i] ? vals[i].trim() : ''; });     obj.lat = parseFloat(obj.lat);     obj.lon = parseFloat(obj.lon);     return obj;   }); } fetch(CSV_URL)   .then(r => r.text())   .then(text => { RAW = parseCSV(text); render(); })   .catch(() => render());
+    function updateStats(allRows, visibleRows) {
+      els.totalCount.textContent = allRows.length;
+      els.visibleCount.textContent = visibleRows.length;
+      els.countryCount.textContent = uniqueSorted(allRows.map(r => r.pais)).length;
+      els.genreCount.textContent = uniqueSorted(allRows.map(r => r.genero)).length;
+    }
+
+    function setActive(id) {
+      state.activeId = id;
+      renderList(state.filtered);
+    }
+
+    function focusRow(id) {
+      const entry = state.markers.find(m => m.id === id);
+      if (!entry) return;
+      setActive(id);
+      map.setView([entry.row.lat, entry.row.lon], Math.max(map.getZoom(), 5));
+      entry.marker.openPopup();
+    }
+
+    function applyFilters() {
+      const term = els.search.value.trim().toLowerCase();
+      const genre = els.genreFilter.value;
+      const country = els.countryFilter.value;
+
+      state.filtered = state.rows.filter(row => {
+        const haystack = [row.grupo, row.pais, row.ciudad, row.genero, row.disco].join(" ").toLowerCase();
+        return (!term || haystack.includes(term)) &&
+               (!genre || row.genero === genre) &&
+               (!country || row.pais === country);
+      });
+
+      updateStats(state.rows, state.filtered);
+      renderList(state.filtered);
+      renderMarkers(state.filtered);
+
+      els.statusText.className = "meta ok";
+      els.statusText.textContent = `Última actualización: ${new Date().toLocaleString("es-ES")}`;
+    }
+
+    async function loadSheet() {
+      try {
+        els.statusText.className = "meta";
+        els.statusText.textContent = "Actualizando datos…";
+
+        const res = await fetch(`${SHEET_CSV_URL}&t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const text = await res.text();
+        const rows = normalizeRows(parseCSV(text));
+
+        state.rows = rows;
+
+        fillSelect(els.genreFilter, uniqueSorted(rows.map(r => r.genero)));
+        fillSelect(els.countryFilter, uniqueSorted(rows.map(r => r.pais)));
+
+        applyFilters();
+      } catch (error) {
+        console.error(error);
+        els.statusText.className = "meta error";
+        els.statusText.textContent = "No se pudieron cargar los datos del Sheet. Publica la hoja para acceso web.";
+      }
+    }
+
+    els.search.addEventListener("input", applyFilters);
+    els.genreFilter.addEventListener("change", applyFilters);
+    els.countryFilter.addEventListener("change", applyFilters);
+
+    loadSheet();
+    setInterval(loadSheet, REFRESH_MS);
   </script>
 </body>
 </html>
