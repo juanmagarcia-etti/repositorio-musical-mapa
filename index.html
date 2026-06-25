@@ -1,97 +1,234 @@
 <!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Repositorio Musical Mapa</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,sans-serif;background:#111;color:#eee;overflow:hidden}
-#map{height:100vh;width:100%}
-#sidebar{position:fixed;top:16px;right:16px;width:340px;background:#1a1a2e;border-radius:12px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,.6);z-index:1000;display:none}
-#sidebar.active{display:block;animation:fadeIn .2s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-#sidebar .close{float:right;cursor:pointer;font-size:20px;color:#999;line-height:1}
-#sidebar .close:hover{color:#fff}
-#sidebar h2{font-size:18px;margin-bottom:12px;color:#fff;border-bottom:1px solid #444;padding-bottom:6px}
-#sidebar .field{margin-bottom:8px;font-size:13px;color:#bbb}
-#sidebar .field strong{color:#7a8}
-#sidebar .portada{margin-top:16px;border-radius:8px;width:100%;display:block}
-#sidebar a{color:#6af;text-decoration:none}
-#sidebar a:hover{text-decoration:underline}
-.header{position:fixed;top:16px;left:16px;z-index:1000;background:rgba(26,26,46,.9);border-radius:12px;padding:12px 18px;box-shadow:0 4px 24px rgba(0,0,0,.6);backdrop-filter:blur(8px)}
-.header h1{font-size:15px;color:#fff;font-weight:600}
-.header .status{font-size:11px;color:#889;margin-top:4px}
-.marker-count{position:fixed;bottom:24px;left:24px;z-index:1000;background:rgba(26,26,46,.9);border-radius:12px;padding:10px 16px;font-size:12px;color:#99a;box-shadow:0 4px 24px rgba(0,0,0,.6);backdrop-filter:blur(8px)}
-.loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2000;font-size:14px;color:#99a;text-align:center}
-.spinner{width:32px;height:32px;border:3px solid #333;border-top-color:#777;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.leaflet-popup-content-wrapper{background:#1a1a2e;color:#ccc;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
-.leaflet-popup-tip{background:#1a1a2e}
-.leaflet-popup-content{margin:12px 14px;font-size:13px;font-weight:500;color:#fff}
-</style></head>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapa Musical Filtrable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    :root, [data-theme="light"] {
+      --bg:#f5f1ea; --surface:#fbf7f1; --surface-2:#efe9e0; --border:rgba(40,37,29,.12);
+      --text:#28251d; --muted:#706a63; --faint:#a0978c; --accent:#0e6b73; --accent-2:#b25b32;
+      --shadow:0 16px 36px rgba(30,24,18,.10);
+    }
+    [data-theme="dark"] {
+      --bg:#11110f; --surface:#181715; --surface-2:#22211e; --border:rgba(255,255,255,.08);
+      --text:#ddd8d0; --muted:#978f86; --faint:#5e5953; --accent:#76acb4; --accent-2:#d58c62;
+      --shadow:0 18px 42px rgba(0,0,0,.34);
+    }
+    * { box-sizing:border-box; }
+    html,body { margin:0; min-height:100%; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+    .app { min-height:100vh; display:grid; grid-template-columns:390px 1fr; }
+    .sidebar { border-right:1px solid var(--border); background:linear-gradient(180deg,var(--surface),var(--bg)); padding:22px 18px; overflow:auto; }
+    .eyebrow { font-size:12px; text-transform:uppercase; letter-spacing:.14em; color:var(--accent-2); font-weight:700; margin-bottom:10px; }
+    h1 { margin:0; font-family:'Instrument Serif',serif; font-size:clamp(34px,4vw,52px); line-height:.95; font-weight:400; letter-spacing:-.03em; }
+    .sub { margin:14px 0 18px; color:var(--muted); font-size:14px; line-height:1.5; max-width:29ch; }
+    .toolbar { display:grid; grid-template-columns:1fr 44px; gap:10px; margin-bottom:12px; }
+    .search,.select { width:100%; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:12px; padding:12px 14px; outline:none; }
+    .theme-btn { width:44px; height:44px; border-radius:12px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; }
+    .filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+    .stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+    .stat { border:1px solid var(--border); background:var(--surface); border-radius:999px; padding:8px 12px; font-size:12px; color:var(--muted); }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+    .chip { border:1px solid var(--border); background:var(--surface); color:var(--muted); border-radius:999px; padding:8px 12px; font-size:12px; cursor:pointer; }
+    .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .list { display:grid; gap:12px; }
+    .item { border:1px solid var(--border); background:var(--surface); border-radius:18px; padding:14px; display:grid; grid-template-columns:58px 1fr; gap:12px; cursor:pointer; box-shadow:var(--shadow); }
+    .item img { width:58px; height:58px; object-fit:cover; border-radius:12px; display:block; background:var(--surface-2); }
+    .item-name { font-weight:700; font-size:15px; margin-bottom:4px; }
+    .item-meta { color:var(--muted); font-size:12px; line-height:1.45; }
+    .map-wrap { position:relative; min-height:100vh; }
+    #map { height:100vh; width:100%; }
+    .panel { position:absolute; right:20px; top:20px; width:min(390px,calc(100% - 40px)); background:color-mix(in oklab,var(--surface) 92%,transparent); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow); overflow:hidden; z-index:500; }
+    .cover { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:var(--surface-2); }
+    .panel-body { padding:18px; }
+    .panel-title { margin:0 0 10px; font-family:'Instrument Serif',serif; font-size:34px; line-height:.95; font-weight:400; }
+    .panel-row { margin:0 0 10px; color:var(--muted); font-size:14px; line-height:1.45; }
+    .label { color:var(--faint); text-transform:uppercase; letter-spacing:.1em; font-size:11px; display:block; margin-bottom:4px; }
+    .listen { display:inline-flex; align-items:center; justify-content:center; width:100%; padding:13px 16px; border-radius:12px; background:var(--accent); color:#fff; text-decoration:none; font-weight:700; margin-top:8px; }
+    .leaflet-popup-content-wrapper,.leaflet-popup-tip { background:var(--surface); color:var(--text); }
+    .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background:rgba(14,107,115,.18); }
+    .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background:var(--accent); color:#fff; font-weight:700; }
+    @media (max-width:980px) {
+      .app { grid-template-columns:1fr; }
+      .sidebar { border-right:none; border-bottom:1px solid var(--border); }
+      .map-wrap,#map { min-height:72vh; height:72vh; }
+      .panel { left:12px; right:12px; top:auto; bottom:12px; width:auto; }
+      .filters { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
 <body>
-<div class="header"><h1>Repositorio Musical</h1><div class="status">Conectando con Google Sheets&hellip;</div></div>
-<div id="loading" class="loading"><div class="spinner"></div>Cargando datos&hellip;</div>
-<div id="map"></div>
-<div class="marker-count">0 grupos cargados</div>
-<script>
-const CSV_URL='https://docs.google.com/spreadsheets/d/1cyhc4HdPzMcCTFhOQidzXWqAEyNPT7wEbrwcAKqfkHs/export?format=csv';
-const COORDS={'Canada':[56.13,-106.35],'Espana':[40.46,-3.75],'Argentina':[-34.61,-58.38],'Noruega':[60.47,8.47],'Italia':[40.85,14.27]};
-const map=L.map('map',{zoomControl:false,zoomDelta:0.5}).setView([28,0],3);
-L.control.zoom({position:'bottomright'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',maxZoom:19}).addTo(map);
-let count=0;
-fetch(CSV_URL).then(r=>r.ok?r.text():Promise.reject(r.status))
-.then(text=>{
-const lines=text.trim().split('\n');
-const hdr=lines[0].split(',').map(h=>h.trim());
-for(let i=1;i<lines.length;i++){
-const row=lines[i].split(',');
-if(row.length<2)continue;
-const d={};hdr.forEach((h,j)=>{d[h]=row[j]?.trim()||''});
-if(!d.grupo||!d.pais)continue;
-const c=COORDS[d.pais];
-if(!c)continue;
-const mk=L.marker(c,{title:d.grupo}).addTo(map);
-const info='<strong>'+d.grupo+'</strong><br><em>'+d.genero+'</em><br>'+d.pais;
-mk.bindPopup(info);
-mk.on('click',()=>showSidebar(d));
-count++;
-}
-document.getElementById('loading').style.display='none';
-document.querySelector('.header .status').textContent=count+' grupos cargados desde Google Sheets';
-document.querySelector('.marker-count').textContent=count+' grupos cargados';
-})
-.catch(e=>{
-document.getElementById('loading').innerHTML='Error cargando datos';
-document.querySelector('.header .status').textContent='Error al conectar';
-console.error(e);
-});
-function showSidebar(d){
-document.getElementById('sb-grupo').textContent=d.grupo;
-document.getElementById('sb-genero').textContent=d.genero||'-';
-document.getElementById('sb-pais').textContent=d.pais||'-';
-document.getElementById('sb-ciudad').textContent=d.ciudad||'-';
-document.getElementById('sb-disco').textContent=d.disco_clave||'-';
-const link=document.getElementById('sb-link');
-link.href=d.youtube_music||'#';
-link.textContent=d.youtube_music?'Escuchar en YouTube Music':'-';
-const img=document.getElementById('sb-portada');
-if(d.portada&&d.portada.length>5){img.src=d.portada;img.style.display='block';}else{img.style.display='none';}
-document.getElementById('sidebar').classList.add('active');
-}
-</script>
-<div id="sidebar">
-<span class="close" onclick="this.parentElement.classList.remove('active')">&times;</span>
-<h2 id="sb-grupo">Grupo</h2>
-<div class="field"><strong>G&#233;nero:</strong> <span id="sb-genero"></span></div>
-<div class="field"><strong>Pa&#237;s:</strong> <span id="sb-pais"></span></div>
-<div class="field"><strong>Ciudad:</strong> <span id="sb-ciudad"></span></div>
-<div class="field"><strong>Disco clave:</strong> <span id="sb-disco"></span></div>
-<div class="field"><strong>Escuchar:</strong> <a id="sb-link" href="#" target="_blank">Abrir</a></div>
-<img id="sb-portada" class="portada" style="display:none" alt="Portada">
-</div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="eyebrow">Repositorio musical</div>
+      <h1>Mapa de grupos</h1>
+      <p class="sub">Ahora sí: buscador, filtro por país, filtro por género y agrupación de marcadores para que el mapa no se convierta en un infierno cuando crezca.</p>
+      <div class="toolbar">
+        <input id="search" class="search" type="text" placeholder="Buscar grupo, disco, ciudad o país" />
+        <button class="theme-btn" id="themeBtn" aria-label="Cambiar tema">◐</button>
+      </div>
+      <div class="filters">
+        <select id="countryFilter" class="select"></select>
+        <select id="genreFilter" class="select"></select>
+      </div>
+      <div class="stats">
+        <div class="stat" id="countStat"></div>
+        <div class="stat" id="countryStat"></div>
+      </div>
+      <div class="chips" id="quickGenres"></div>
+      <div class="list" id="list"></div>
+    </aside>
+    <main class="map-wrap">
+      <div id="map"></div>
+      <section class="panel" id="panel">
+        <img id="cover" class="cover" alt="Portada del disco" />
+        <div class="panel-body">
+          <h2 id="title" class="panel-title"></h2>
+          <p class="panel-row"><span class="label">Ubicación</span><span id="location"></span></p>
+          <p class="panel-row"><span class="label">Género</span><span id="genre"></span></p>
+          <p class="panel-row"><span class="label">Disco clave</span><span id="album"></span></p>
+          <a id="listen" class="listen" href="#" target="_blank" rel="noopener noreferrer">Escuchar en YouTube Music</a>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script>
+    const RAW = [{"grupo": "Rush", "pais": "Canada", "ciudad": "Toronto", "genero": "Rock Progresivo", "disco_clave": "Moving Pictures", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_kqF9F8pTNDZKZ6Rhz9I0eEiVwr0QjWPSw&si=lTgSGIzFo8-mdO2e", "portada": "https://upload.wikimedia.org/wikipedia/en/9/97/Rush_Moving_Pictures.png", "lat": 43.6532, "lon": -79.3832}, {"grupo": "Carolina Durante", "pais": "Espana", "ciudad": "Madrid", "genero": "Indie Rock", "disco_clave": "Elige tu propia aventura", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_nLVwnfm_ZZdUNYqG8Th2G1kwIO2UpeYiQ&si=sBTWSisk1t6V3PDh", "portada": "https://upload.wikimedia.org/wikipedia/en/thumb/1/1b/Carolina_Durante_-_Elige_tu_propia_aventura.png/600px-Carolina_Durante_-_Elige_tu_propia_aventura.png", "lat": 40.4168, "lon": -3.7038}, {"grupo": "Pescado Rabioso", "pais": "Argentina", "ciudad": "Buenos Aires", "genero": "Folk Rock", "disco_clave": "Artaud", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_lo1rg5ZVqTZ3IP9j2PXQlyj5es9lXqKww&si=_w2owdhSDo8ht4_y", "portada": "https://upload.wikimedia.org/wikipedia/en/5/5e/Artaud_%28album_cover%29.jpg", "lat": -34.6037, "lon": -58.3816}, {"grupo": "Burzum", "pais": "Noruega", "ciudad": "Bergen", "genero": "Black Metal", "disco_clave": "Filosofem", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_nuHUBdFPFE0WMYv5OjyNPWMyXNwILrK3s&si=HR83R6N3VExmqx9h", "portada": "https://upload.wikimedia.org/wikipedia/en/5/5b/Burzum_-_Filosofem.png", "lat": 60.3913, "lon": 5.3221}, {"grupo": "Mind Enterprises", "pais": "Italia", "ciudad": "Napolis", "genero": "Italo Disco", "disco_clave": "Negroni Love", "youtube_music": "https://music.youtube.com/playlist?list=OLAK5uy_mPv_ZwstFlb3aDN_suZ--mFieLx4DZfEs&si=CV06OEgDJ0VgA1Fd", "portada": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b8/Mind_Enterprises_-_Negroni_Love.png/600px-Mind_Enterprises_-_Negroni_Love.png", "lat": 40.8518, "lon": 14.2681}];
+    let searchText = '';
+    let activeCountry = 'Todos';
+    let activeGenre = 'Todos';
+    let activeQuickGenre = 'Todos';
+
+    const genreColors = {
+      'Rock Progresivo': '#4c8c90',
+      'Indie Rock': '#b86240',
+      'Folk Rock': '#8e7d4d',
+      'Black Metal': '#6a6a6a',
+      'Italo Disco': '#a3537f'
+    };
+
+    const map = L.map('map', { zoomControl: true, worldCopyJump: true }).setView([28, 5], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    const cluster = L.markerClusterGroup({ showCoverageOnHover:false, spiderfyOnMaxZoom:true, maxClusterRadius:48 });
+    map.addLayer(cluster);
+
+    const markerIcon = (color) => L.divIcon({
+      className: '',
+      html: `<div style="width:18px;height:18px;border-radius:999px;background:${color};border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,.22)"></div>`,
+      iconSize:[18,18], iconAnchor:[9,9]
+    });
+
+    const list = document.getElementById('list');
+    const countryFilter = document.getElementById('countryFilter');
+    const genreFilter = document.getElementById('genreFilter');
+    const quickGenres = document.getElementById('quickGenres');
+
+    function uniqueValues(key) {
+      return [...new Set(RAW.map(r => r[key]).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+    }
+
+    function buildSelect(select, values, current, placeholder) {
+      select.innerHTML = [`<option value="Todos">${placeholder}</option>`, ...values.map(v => `<option value="${v}" ${v===current?'selected':''}>${v}</option>`)].join('');
+    }
+
+    function buildQuickGenres() {
+      const genres = ['Todos', ...uniqueValues('genero')];
+      quickGenres.innerHTML = genres.map(g => `<button class="chip ${g===activeQuickGenre?'active':''}" data-genre="${g}">${g}</button>`).join('');
+      quickGenres.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', () => {
+        activeQuickGenre = btn.dataset.genre;
+        activeGenre = activeQuickGenre === 'Todos' ? 'Todos' : activeQuickGenre;
+        genreFilter.value = activeGenre;
+        render();
+      }));
+    }
+
+    function filteredData() {
+      return RAW.filter(r => {
+        const text = `${r.grupo} ${r.pais} ${r.ciudad} ${r.genero} ${r.disco_clave}`.toLowerCase();
+        const searchOk = !searchText || text.includes(searchText);
+        const countryOk = activeCountry === 'Todos' || r.pais === activeCountry;
+        const genreOk = activeGenre === 'Todos' || r.genero === activeGenre;
+        return searchOk && countryOk && genreOk;
+      });
+    }
+
+    function openFicha(item) {
+      document.getElementById('cover').src = item.portada;
+      document.getElementById('cover').alt = `Portada de ${item.disco_clave}`;
+      document.getElementById('title').textContent = item.grupo;
+      document.getElementById('location').textContent = `${item.ciudad}, ${item.pais}`;
+      document.getElementById('genre').textContent = item.genero;
+      document.getElementById('album').textContent = item.disco_clave;
+      document.getElementById('listen').href = item.youtube_music;
+    }
+
+    function renderList(data) {
+      if (!data.length) { list.innerHTML = '<div class="item" style="grid-template-columns:1fr;cursor:default"><div class="item-meta">No hay resultados con esos filtros.</div></div>'; return; }
+      list.innerHTML = data.map((item, i) => `
+        <article class="item" data-index="${i}">
+          <img src="${item.portada}" alt="Portada de ${item.disco_clave}" loading="lazy" width="58" height="58">
+          <div>
+            <div class="item-name">${item.grupo}</div>
+            <div class="item-meta">${item.ciudad}, ${item.pais}</div>
+            <div class="item-meta">${item.genero} · ${item.disco_clave}</div>
+          </div>
+        </article>
+      `).join('');
+      list.querySelectorAll('.item').forEach((el, i) => el.addEventListener('click', () => {
+        const item = data[i];
+        openFicha(item);
+        map.flyTo([Number(item.lat), Number(item.lon)], 5, { duration:0.8 });
+      }));
+    }
+
+    function renderMap(data) {
+      cluster.clearLayers();
+      const markers = data.map(item => {
+        const color = genreColors[item.genero] || '#4c8c90';
+        const marker = L.marker([Number(item.lat), Number(item.lon)], { icon: markerIcon(color) });
+        marker.bindPopup(`<strong>${item.grupo}</strong><br>${item.ciudad}, ${item.pais}<br>${item.disco_clave}`);
+        marker.on('click', () => openFicha(item));
+        return marker;
+      });
+      cluster.addLayers(markers);
+      if (markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
+    }
+
+    function renderStats(data) {
+      document.getElementById('countStat').textContent = `${data.length} grupo${data.length!==1?'s':''}`;
+      const countries = new Set(data.map(d => d.pais));
+      document.getElementById('countryStat').textContent = `${countries.size} país${countries.size!==1?'es':''} visibles`;
+    }
+
+    function render() {
+      buildSelect(countryFilter, uniqueValues('pais'), activeCountry, 'Todos los países');
+      buildSelect(genreFilter, uniqueValues('genero'), activeGenre, 'Todos los géneros');
+      buildQuickGenres();
+      const data = filteredData();
+      renderStats(data);
+      renderList(data);
+      renderMap(data);
+      if (data.length) openFicha(data[0]);
+    }
+
+    document.getElementById('search').addEventListener('input', e => { searchText = e.target.value.toLowerCase().trim(); render(); });
+    countryFilter.addEventListener('change', e => { activeCountry = e.target.value; render(); });
+    genreFilter.addEventListener('change', e => { activeGenre = e.target.value; activeQuickGenre = e.target.value; render(); });
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      const root = document.documentElement;
+      root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    render();
+  </script>
 </body>
 </html>
